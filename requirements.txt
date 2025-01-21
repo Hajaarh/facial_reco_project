@@ -1,10 +1,8 @@
 Flask
 Flask-SQLAlchemy
-psycopg2-binary
-tensorflow-cpu
-tensorflow-hub 
+deepface
+pymysql
 numpy
-pillow
-Jinja2
-Werkzeug
+Pillow
 requests
+

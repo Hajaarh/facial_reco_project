@@ -2,33 +2,25 @@ version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: facial_recognition_app
+    build: .
+    container_name: facial_app
     ports:
       - "5000:5000"
-    volumes:
-      - .:/app
-    environment:
-      - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://user:password@db:5432/facial_recognition
     depends_on:
       - db
-    restart: unless-stopped
 
   db:
-    image: postgres:14
-    container_name: facial_recognition_db
+    image: mysql:8
+    container_name: facial_db
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: facial_recognition
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: facial_recognition
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
+      - mysql_data:/var/lib/mysql
 
 volumes:
-  postgres_data:
+  mysql_data:

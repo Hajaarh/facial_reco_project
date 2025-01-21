@@ -1,99 +1,251 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facial Recognition API</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 20px;
-        }
-        .drop-zone {
-            border: 2px dashed #ccc;
-            border-radius: 10px;
-            padding: 20px;
-            width: 300px;
-            margin: auto;
-            background-color: #f9f9f9;
-        }
-        .drop-zone.dragover {
-            border-color: #007bff;
-            background-color: #e9f5ff;
-        }
-        #file-info {
-            margin-top: 20px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Reconnaissance Faciale - Interface Animée</title>
+
+  <style>
+    /* --- RESET & BASE --- */
+    * {
+      margin: 0; 
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body, html {
+      height: 100%;
+      font-family: 'Arial', sans-serif;
+      overflow: hidden; /* empêche le scroll si on veut un full-screen */
+    }
+
+    /* --- BACKGROUND ANIMÉ (gradient) --- */
+    body {
+      background: linear-gradient(270deg, #ff3b77, #ff8237, #ffd400, #6eff3b, #00d4ff, #8c3bff);
+      background-size: 1200% 1200%;
+      animation: gradient 15s ease infinite;
+    }
+    @keyframes gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* --- CONTAINER PRINCIPAL --- */
+    .container {
+      width: 80%;
+      max-width: 800px;
+      margin: 40px auto;
+      background-color: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 20px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      overflow: auto; /* pour scroller si besoin */
+      color: #fff;
+    }
+
+    .container h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 2.2rem;
+    }
+
+    /* --- SMALL NOTE RGPD --- */
+    .notice-rgpd {
+      text-align: center;
+      margin-bottom: 20px;
+      font-style: italic;
+      opacity: 0.9;
+    }
+
+    /* --- FORM STYLES --- */
+    .form-block {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 8px;
+    }
+
+    .form-block h2 {
+      margin-bottom: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 1.3rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+
+    input[type="text"],
+    input[type="file"] {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      outline: none;
+    }
+
+    input[type="file"] {
+      color: #fff; /* Pour que ce soit lisible sur fond sombre */
+    }
+
+    button {
+      align-self: flex-start;
+      padding: 0.7rem 1.5rem;
+      border: none;
+      border-radius: 4px;
+      background-color: #00c3ff;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #008bb3;
+    }
+
+    /* --- FEEDBACK ZONE --- */
+    .feedback {
+      margin-top: 1rem;
+      background: rgba(0,0,0,0.1);
+      padding: 1rem;
+      border-radius: 4px;
+      min-height: 50px;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      color: #eee;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+  </style>
 </head>
 <body>
-    <h1>Facial Recognition</h1>
-    <div class="drop-zone" id="drop-zone">
-        <p>Glisser-déposer vos deux images ici</p>
-        <input type="file" id="file-input" style="display: none;" multiple>
-    </div>
-    <button id="submit-button" disabled>Envoyer</button>
-    <div id="file-info"></div>
 
-    <script>
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const submitButton = document.getElementById('submit-button');
-        const fileInfo = document.getElementById('file-info');
-        let files = [];
+<div class="container">
+  <h1>Reconnaissance Faciale</h1>
+  <p class="notice-rgpd">
+    Les images sont immédiatement supprimées après traitement. 
+    Seuls les gabarits (embeddings) sont conservés (données biométriques). 
+    Merci de votre confiance !
+  </p>
 
-        dropZone.addEventListener('click', () => fileInput.click());
+  <!-- Bloc 1 : Formulaire d'enregistrement -->
+  <div class="form-block">
+    <h2>Enregistrer un nouvel employé</h2>
+    <form id="registerForm" method="POST" action="/register" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="name">Nom de l'employé :</label>
+        <input type="text" id="name" name="name" required />
+      </div>
+      <div class="form-group">
+        <label for="imageRegister">Photo (JPG/PNG) :</label>
+        <input type="file" id="imageRegister" name="image" accept="image/*" required />
+      </div>
+      <button type="submit">Enregistrer</button>
+    </form>
+    <div class="feedback" id="registerFeedback"></div>
+  </div>
 
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
+  <!-- Bloc 2 : Formulaire de pointage -->
+  <div class="form-block">
+    <h2>Pointer (Clock In)</h2>
+    <form id="clockInForm" method="POST" action="/clock_in" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="imageClockIn">Photo (JPG/PNG) :</label>
+        <input type="file" id="imageClockIn" name="image" accept="image/*" required />
+      </div>
+      <button type="submit">Pointer</button>
+    </form>
+    <div class="feedback" id="clockInFeedback"></div>
+  </div>
+</div>
 
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
+<div class="footer">
+  &copy; 2025 - Votre Application de Reconnaissance Faciale
+</div>
 
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            files = Array.from(e.dataTransfer.files);
-            displayFileInfo();
-        });
+<script>
+  // -------------------------------------------
+  // Gérer les deux formulaires en AJAX pur
+  // -------------------------------------------
 
-        fileInput.addEventListener('change', () => {
-            files = Array.from(fileInput.files);
-            displayFileInfo();
-        });
+  // 1) Enregistrement
+  const registerForm = document.getElementById('registerForm');
+  const registerFeedback = document.getElementById('registerFeedback');
 
-        function displayFileInfo() {
-            if (files.length === 2) {
-                fileInfo.innerHTML = `
-                    <p><strong>Image connue :</strong> ${files[0].name}</p>
-                    <p><strong>Image inconnue :</strong> ${files[1].name}</p>
-                `;
-                submitButton.disabled = false;
-            } else {
-                fileInfo.innerHTML = `<p>Veuillez sélectionner exactement deux images.</p>`;
-                submitButton.disabled = true;
-            }
-        }
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault(); // Empêche le rechargement de page
 
-        submitButton.addEventListener('click', async () => {
-            if (files.length === 2) {
-                const formData = new FormData();
-                formData.append('known_image', files[0]);
-                formData.append('unknown_image', files[1]);
+    registerFeedback.textContent = "Envoi en cours...";
+    const formData = new FormData(registerForm);
 
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
+    try {
+      const response = await fetch(registerForm.action, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
 
-                const result = await response.json();
-                alert(`Résultat : ${result.match ? "Match" : "Pas de match"} (Distance : ${result.distance.toFixed(2)})`);
-            }
-        });
-    </script>
+      if (response.ok) {
+        registerFeedback.style.color = "lightgreen";
+        registerFeedback.textContent = data.message || "Enregistrement réussi !";
+      } else {
+        registerFeedback.style.color = "yellow";
+        registerFeedback.textContent = data.error || "Une erreur est survenue.";
+      }
+    } catch (error) {
+      registerFeedback.style.color = "red";
+      registerFeedback.textContent = "Erreur : " + error;
+    }
+  });
+
+  // 2) Pointage
+  const clockInForm = document.getElementById('clockInForm');
+  const clockInFeedback = document.getElementById('clockInFeedback');
+
+  clockInForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    clockInFeedback.textContent = "Envoi en cours...";
+    const formData = new FormData(clockInForm);
+
+    try {
+      const response = await fetch(clockInForm.action, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        // On peut afficher le nom de l'employé + distance
+        clockInFeedback.style.color = "lightgreen";
+        clockInFeedback.textContent = data.message 
+          ? `${data.message} (distance: ${data.distance.toFixed(2)})` 
+          : "Pointage réussi !";
+      } else {
+        clockInFeedback.style.color = "yellow";
+        clockInFeedback.textContent = data.error 
+          ? `${data.error} (distance: ${data.distance})`
+          : "Erreur de pointage.";
+      }
+    } catch (error) {
+      clockInFeedback.style.color = "red";
+      clockInFeedback.textContent = "Erreur : " + error;
+    }
+  });
+</script>
+
 </body>
 </html>
