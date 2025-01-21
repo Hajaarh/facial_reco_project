@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facial Recognition API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        .drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            width: 300px;
+            margin: auto;
+            background-color: #f9f9f9;
+        }
+        .drop-zone.dragover {
+            border-color: #007bff;
+            background-color: #e9f5ff;
+        }
+        #file-info {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Facial Recognition</h1>
+    <div class="drop-zone" id="drop-zone">
+        <p>Glisser-déposer vos deux images ici</p>
+        <input type="file" id="file-input" style="display: none;" multiple>
+    </div>
+    <button id="submit-button" disabled>Envoyer</button>
+    <div id="file-info"></div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const submitButton = document.getElementById('submit-button');
+        const fileInfo = document.getElementById('file-info');
+        let files = [];
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            files = Array.from(e.dataTransfer.files);
+            displayFileInfo();
+        });
+
+        fileInput.addEventListener('change', () => {
+            files = Array.from(fileInput.files);
+            displayFileInfo();
+        });
+
+        function displayFileInfo() {
+            if (files.length === 2) {
+                fileInfo.innerHTML = `
+                    <p><strong>Image connue :</strong> ${files[0].name}</p>
+                    <p><strong>Image inconnue :</strong> ${files[1].name}</p>
+                `;
+                submitButton.disabled = false;
+            } else {
+                fileInfo.innerHTML = `<p>Veuillez sélectionner exactement deux images.</p>`;
+                submitButton.disabled = true;
+            }
+        }
+
+        submitButton.addEventListener('click', async () => {
+            if (files.length === 2) {
+                const formData = new FormData();
+                formData.append('known_image', files[0]);
+                formData.append('unknown_image', files[1]);
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                alert(`Résultat : ${result.match ? "Match" : "Pas de match"} (Distance : ${result.distance.toFixed(2)})`);
+            }
+        });
+    </script>
+</body>
+</html>
