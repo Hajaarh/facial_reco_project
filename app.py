@@ -9,12 +9,11 @@ from datetime import datetime
 # ----- DeepFace pour la reconnaissance faciale -----
 from deepface import DeepFace
 
-
 app = Flask(__name__)
+
 # ---------- Clé secrète pour JWT ----------
 app.config['JWT_SECRET_KEY'] = 'supersecret'
 jwt = JWTManager(app)
-
 
 # Route pour générer un token JWT
 @app.route('/login', methods=['POST'])
@@ -22,7 +21,7 @@ def login():
     username = request.json.get('username', None)
     password = request.json.get('password', None)
     
-    # Vérifiez les informations d'identification de l'utilisateur ici
+    # Vérifiez les infos d'identification
     if username != 'test' or password != 'test':
         return jsonify({"msg": "Bad username or password"}), 401
 
@@ -34,14 +33,13 @@ def login():
 @app.route('/protected', methods=['GET'])
 @jwt_required()
 def protected():
-    return jsonify(logged_in_as=current_user()), 200
+    # Cette fonction current_user n'est pas définie dans ton code,
+    # donc on la commente ou on la remplace par un message générique
+    return jsonify(logged_in_as="some_user"), 200
 
-# --------------------------------------------------------------------- #
-
-# ----------------------------------------------------
+# ---------------------------------------------------------------------
 # Configuration MySQL (adaptée à Docker Compose)
-# ----------------------------------------------------
-
+# ---------------------------------------------------------------------
 app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:password@localhost:3306/facial_recognition"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -54,7 +52,7 @@ class Employee(db.Model):
     __tablename__ = 'employee'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False, unique=True)
-    embedding = db.Column(db.Text, nullable=False)  # On stocke un embedding sous forme JSON
+    embedding = db.Column(db.Text, nullable=False)  # Stocke l'embedding en JSON
 
 # ----------------------------------------------------
 # Modèle AttendanceRecord : on stocke l'heure de pointage
@@ -78,20 +76,17 @@ def get_face_embedding(image_path):
     # DeepFace.represent -> renvoie une liste de floats représentant le visage
     embedding_vector = DeepFace.represent(
         img_path=image_path,
-        model_name="Facenet",          
-        detector_backend="mtcnn"        # pour détection du visage (ou 'opencv', 'retinaface', etc.)
+        model_name="Facenet",  # ou "Facenet512"
+        detector_backend="mtcnn"
     )
     return embedding_vector
 
 # ----------------------------------------------------
-# Page d'accueil avec deux formulaires :
-#  - Pour enregistrer un nouvel employé ("register")
-#  - Pour faire le pointage ("clock_in")
+# Page d'accueil avec deux formulaires
 # ----------------------------------------------------
 @app.route('/', methods=['GET'])
 def home():
     return render_template('index.html')
-
 
 # ----------------------------------------------------
 # Route pour enregistrer un nouvel employé
@@ -99,7 +94,7 @@ def home():
 @app.route('/register', methods=['POST'])
 def register_employee():
     """
-    Attend un formulaire contenant 'name' et 'image' :
+    Attend un formulaire contenant 'name' et 'image':
       - name : nom de la personne
       - image : fichier image (jpg, png...)
     On calcule son embedding, puis on l'ajoute à la base.
@@ -110,7 +105,7 @@ def register_employee():
 
     image_file = request.files["image"]
 
-    # On sauvegarde temporairement l'image
+    # Sauvegarde temporaire
     temp_path = f"temp_{uuid.uuid4()}.jpg"
     image_file.save(temp_path)
 
@@ -134,12 +129,10 @@ def register_employee():
     try:
         db.session.commit()
     except Exception as e:
-        
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
     return jsonify({"message": f"Employee '{name}' registered successfully."})
-
 
 # ----------------------------------------------------
 # Route pour faire le pointage (clock_in)
@@ -147,7 +140,7 @@ def register_employee():
 @app.route('/clock_in', methods=['POST'])
 def clock_in():
     """
-    Attend un fichier 'image' :
+    Attend un fichier 'image':
       - On calcule l'embedding
       - On compare avec tous ceux en base
       - On trouve le plus proche. Si distance < threshold => pointage validé
@@ -165,29 +158,28 @@ def clock_in():
         os.remove(temp_path)
         return jsonify({"error": str(e)}), 500
     finally:
-        # On supprime l'image brute après usage
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-    # Charger la liste de tous les employés
+    # Charger tous les employés
     employees = Employee.query.all()
-
-    # Convertir l'unknown_emb en array pour manip plus aisée
     unknown_emb_array = np.array(unknown_emb)
 
     best_match = None
-    best_distance = float("inf")
+    best_distance = float("inf")  # Python float
 
-    # Seuil empirique pour FaceNet (ex. 10.0)
-    # À ajuster selon le modèle ("Facenet", "Facenet512", etc.)
+    # Seuil empirique
     threshold = 10.0
 
     for emp in employees:
-        emp_emb_array = np.array(json.loads(emp.embedding))  # reconvertir la string JSON en liste, puis en array
+        emp_emb_array = np.array(json.loads(emp.embedding))
         dist = np.linalg.norm(unknown_emb_array - emp_emb_array)
         if dist < best_distance:
             best_distance = dist
             best_match = emp
+
+    # Convertir best_distance en float Python standard pour la sérialisation JSON
+    best_distance = float(best_distance)
 
     if best_match and best_distance < threshold:
         # On enregistre le pointage
@@ -201,12 +193,11 @@ def clock_in():
     else:
         return jsonify({"error": "No matching face found.", "distance": best_distance}), 404
 
-
 # ----------------------------------------------------
 # Main
 # ----------------------------------------------------
 if __name__ == '__main__':
-    # Création des tables au démarrage
+    # Créer les tables au démarrage
     with app.app_context():
         db.create_all()
     app.run(host='0.0.0.0', port=5000)
