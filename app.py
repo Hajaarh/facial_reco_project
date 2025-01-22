@@ -16,6 +16,30 @@ app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'supersecret'
 jwt = JWTManager(app)
 
+# ---------------------------------------------------------------------
+# Configuration MySQL (adaptée à Docker Compose)
+# ---------------------------------------------------------------------
+app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:password@localhost:3306/facial_recognition"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db = SQLAlchemy(app)
+
+# ----------------------------------------------------
+# Modèle Employee : on stocke le nom et l'embedding
+# ----------------------------------------------------
+class Employee(db.Model):
+    __tablename__ = 'employee'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, unique=True)
+    embedding = db.Column(db.Text, nullable=False)  # Stocke l'embedding en JSON
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
+    
+# Créer les tables au démarrage
+    with app.app_context():
+        db.create_all()
+
+
 # Route pour générer un token JWT
 @app.route('/login', methods=['POST'])
 def login():
@@ -38,24 +62,6 @@ def protected():
     current_user = get_jwt_identity()
     return jsonify(logged_in_as=current_user), 200
 
-
-# ---------------------------------------------------------------------
-# Configuration MySQL (adaptée à Docker Compose)
-# ---------------------------------------------------------------------
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:password@localhost:3306/facial_recognition"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-db = SQLAlchemy(app)
-
-# ----------------------------------------------------
-# Modèle Employee : on stocke le nom et l'embedding
-# ----------------------------------------------------
-class Employee(db.Model):
-    __tablename__ = 'employee'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255), nullable=False, unique=True)
-    embedding = db.Column(db.Text, nullable=False)  # Stocke l'embedding en JSON
-    email = db.Column(db.String(120), unique=True, nullable=False)
 
 # ----------------------------------------------------
 # Modèle AttendanceRecord : on stocke l'heure de pointage
@@ -192,7 +198,4 @@ def clock_in():
 # Main
 # ----------------------------------------------------
 if __name__ == '__main__':
-    # Créer les tables au démarrage
-    with app.app_context():
-        db.create_all()
     app.run(host='0.0.0.0', port=5000)
