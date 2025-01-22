@@ -43,10 +43,7 @@ Le tout est conçu pour être **exécuté via Docker**, offrant ainsi un déploi
    - Les deux conteneurs partagent un **réseau Docker**.  
    - L’API Flask interagit avec MySQL via l’URI (ex. `mysql+pymysql://user:password@db:3306/facial_recognition`).  
    - L’interface HTML s’adresse à Flask sur `http://localhost:5000` (mappé par Docker).
-
-4. **RGPD-friendly** :  
-   - Les photos uploadées ne sont pas stockées durablement : on calcule l’**embedding** (vecteur numérique) et on efface immédiatement l’image brute.  
-
+   
 ---
 
 ## 3. Installation et Lancement
@@ -56,3 +53,59 @@ Le tout est conçu pour être **exécuté via Docker**, offrant ainsi un déploi
    ```bash
    git clone https://github.com/ton-projet/facial_recognition.git
    cd facial_recognition
+
+3. Lancez Docker Compose pour construire et démarrer les conteneurs :
+   ```bash
+   sudo docker-compose up -d
+   ```
+
+4. Accédez à l’application via votre navigateur à l’adresse :
+   - **Local** : `http://localhost:5000`
+   - **Serveur AWS** : Remplacez `localhost` par l’adresse IP publique de votre instance EC2.
+
+---
+## 4. Configuration et Utilisation
+
+### 4.1 Configuration des conteneurs
+- **Base de données** :
+  - MySQL est automatiquement initialisé avec les tables nécessaires (`Employee` et `AttendanceRecord`).
+- **Fichier de dépendances** :
+  - Le fichier `requirements.txt` contient toutes les bibliothèques nécessaires pour le backend Python.
+
+### 4.2 Utilisation
+
+1. **Enregistrer un nouvel utilisateur** :
+   - Entrez le nom de l’utilisateur et téléchargez une photo via le formulaire prévu.
+   - Le visage est traité pour générer un « embedding », ensuite sauvegardé dans la base.
+
+2. **Pointage** :
+   - Téléchargez une photo pour vérifier la correspondance avec les utilisateurs enregistrés.
+   - Si une correspondance est trouvée (distance inférieure au seuil), le pointage est enregistré.
+
+---
+
+
+## 5. Déploiement sur AWS
+
+1. **Configuration de l'instance EC2** :
+   - Utilisez une instance avec Docker pré-installé (ex. : Amazon Linux ou Ubuntu).
+
+2. **Accès SSH** :
+   ```bash
+   ssh -i "votre-cle.pem" ec2-user@votre-adresse-ip
+   ```
+
+3. **Lancer l'application** :
+   - Clonez le dépôt sur l’instance, configurez Docker Compose, puis suivez les étapes d’installation.
+
+4. **Sécurisation et accès distant** :
+   - Configurez un groupe de sécurité AWS pour autoriser les connexions HTTP/HTTPS (ports 80 et 443).
+
+---
+## 7. Contributeur
+- Hajar HAILAF
+---
+
+
+
+
