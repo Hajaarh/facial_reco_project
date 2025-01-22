@@ -1,23 +1,5 @@
 # Reconnaissance Faciale : Approche Docker
 
-┌────────────┐          (Internet)           ┌───────────────┐
-│   Utilisateur (Navigateur)                 │    AWS EC2     │
-│   (HTML/CSS/JS)          ────────────────> │ (Instance Linux)│
-└────────────┘                                │     Docker      │
-                                              └─────┬───────────┘
-                                                    │
-                                               ┌────┴────┐
-                                               │  Flask  │
-                                               │+DeepFace │
-                                               │ +SQLAlchemy
-                                               └────┬────┘
-                                                    │
-                                                    v
-                                               ┌────────┐
-                                               │ MySQL  │
-                                               └────────┘
-
-
 ## 1. Contexte et Objectif
 
 Ce projet implémente un **système de reconnaissance faciale** dont les fonctionnalités principales sont :
