@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reconnaissance Faciale - Interface Animée</title>
-
   <style>
     /* --- RESET & BASE --- */
     * {
@@ -19,7 +19,7 @@
 
     /* --- BACKGROUND ANIMÉ (gradient) --- */
     body {
-      background: linear-gradient(270deg, #ff3b77, #ff8237, #ffd400, #6eff3b, #00d4ff, #8c3bff);
+      background: linear-gradient(270deg, #ff3b77, #ff8237, #ffd400, #00d4ff, #8c3bff);
       background-size: 1200% 1200%;
       animation: gradient 15s ease infinite;
     }
@@ -85,6 +85,8 @@
     }
 
     input[type="text"],
+    input[type="email"],
+    input[type="password"],
     input[type="file"] {
       width: 100%;
       padding: 0.6rem;
@@ -170,6 +172,23 @@
     </form>
     <div class="feedback" id="clockInFeedback"></div>
   </div>
+
+  <!-- Bloc 3 : Formulaire de connexion -->
+  <div class="form-block">
+    <h2>Connexion</h2>
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="email">Email :</label>
+        <input type="email" id="email" name="email" required />
+      </div>
+      <div class="form-group">
+        <label for="password">Mot de passe :</label>
+        <input type="password" id="password" name="password" required />
+      </div>
+      <button type="submit">Connexion</button>
+    </form>
+    <div class="feedback" id="loginFeedback"></div>
+  </div>
 </div>
 
 <div class="footer">
@@ -178,7 +197,7 @@
 
 <script>
   // -------------------------------------------
-  // Gérer les deux formulaires en AJAX pur
+  // Gérer les trois formulaires en AJAX pur
   // -------------------------------------------
 
   // 1) Enregistrement
@@ -269,6 +288,53 @@
     } catch (error) {
       clockInFeedback.style.color = "red";
       clockInFeedback.textContent = "Erreur : " + error;
+    }
+  });
+
+  // 3) Connexion
+  const loginForm = document.getElementById('loginForm');
+  const loginFeedback = document.getElementById('loginFeedback');
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    loginFeedback.textContent = "Envoi en cours...";
+    loginFeedback.style.color = "#fff";
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    try {
+      const response = await fetch('/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        const text = await response.text();
+        loginFeedback.style.color = "red";
+        loginFeedback.textContent = `Erreur (réponse non-JSON) : ${text}`;
+        return;
+      }
+
+      if (response.ok) {
+        loginFeedback.style.color = "lightgreen";
+        loginFeedback.textContent = "Connexion réussie ! Token : " + data.access_token;
+        // Vous pouvez stocker le token dans le localStorage ou le sessionStorage
+        // localStorage.setItem('token', data.access_token);
+      } else {
+        loginFeedback.style.color = "yellow";
+        loginFeedback.textContent = data.msg || "Une erreur est survenue.";
+      }
+    } catch (error) {
+      loginFeedback.style.color = "red";
+      loginFeedback.textContent = "Erreur : " + error;
     }
   });
 </script>

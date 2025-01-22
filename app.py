@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import uuid
 import json
@@ -18,24 +19,25 @@ jwt = JWTManager(app)
 # Route pour générer un token JWT
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.json.get('username', None)
+    email = request.json.get('email', None)
     password = request.json.get('password', None)
     
     # Vérifiez les infos d'identification
-    if username != 'test' or password != 'test':
-        return jsonify({"msg": "Bad username or password"}), 401
+    employee = Employee.query.filter_by(email=email).first()
+    if employee is None or not check_password_hash(employee.password, password):
+        return jsonify({"msg": "Bad email or password"}), 401
 
     # Créez un nouveau token d'accès
-    access_token = create_access_token(identity=username)
+    access_token = create_access_token(identity=email)
     return jsonify(access_token=access_token)
 
 # Exemple de route protégée
 @app.route('/protected', methods=['GET'])
 @jwt_required()
 def protected():
-    # Cette fonction current_user n'est pas définie dans ton code,
-    # donc on la commente ou on la remplace par un message générique
-    return jsonify(logged_in_as="some_user"), 200
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
+
 
 # ---------------------------------------------------------------------
 # Configuration MySQL (adaptée à Docker Compose)
@@ -53,6 +55,7 @@ class Employee(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False, unique=True)
     embedding = db.Column(db.Text, nullable=False)  # Stocke l'embedding en JSON
+    email = db.Column(db.String(120), unique=True, nullable=False)
 
 # ----------------------------------------------------
 # Modèle AttendanceRecord : on stocke l'heure de pointage
