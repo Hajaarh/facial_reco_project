@@ -7,13 +7,12 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      - db
-
-  db:
+      - facial_db
+  facial_db:
     image: mysql:8
     container_name: facial_db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: password
       MYSQL_USER: user
       MYSQL_PASSWORD: password
       MYSQL_DATABASE: facial_recognition
@@ -22,7 +21,18 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    restart: always
+    ports:
+      - "8080:80"  # Map le port local 8080 au port du conteneur
+    environment:
+      PMA_HOST: facial_db  # Relie PhpMyAdmin à MariaDB
+      PMA_USER: root
+      PMA_PASSWORD: password
+
 volumes:
   mysql_data:
-    
+
 
