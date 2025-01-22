@@ -1,6 +1,8 @@
 Flask
 Flask-SQLAlchemy
+Flask-JWT-Extended
 deepface
+Werkzeug
 pymysql
 tensorflow-cpu==2.10.0
 numpy

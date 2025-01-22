@@ -1,15 +1,42 @@
 from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 import os
 import uuid
 import json
 import numpy as np
 from datetime import datetime
-
 # ----- DeepFace pour la reconnaissance faciale -----
 from deepface import DeepFace
 
+
 app = Flask(__name__)
+# ---------- Clé secrète pour JWT ----------
+app.config['JWT_SECRET_KEY'] = 'supersecret'
+jwt = JWTManager(app)
+
+
+# Route pour générer un token JWT
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.json.get('username', None)
+    password = request.json.get('password', None)
+    
+    # Vérifiez les informations d'identification de l'utilisateur ici
+    if username != 'test' or password != 'test':
+        return jsonify({"msg": "Bad username or password"}), 401
+
+    # Créez un nouveau token d'accès
+    access_token = create_access_token(identity=username)
+    return jsonify(access_token=access_token)
+
+# Exemple de route protégée
+@app.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    return jsonify(logged_in_as=current_user()), 200
+
+# --------------------------------------------------------------------- #
 
 # ----------------------------------------------------
 # Configuration MySQL (adaptée à Docker Compose)

@@ -11,12 +11,15 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev
 
+# Copier le reste de l'application
+COPY . /app
+
 # Copier et installer les dépendances Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copier le reste de l'application
-COPY . .
+# Exposer le port sur lequel l'application va tourner
+EXPOSE 5000
 
 # Commande par défaut pour démarrer l'application
 CMD ["python", "app.py"]
