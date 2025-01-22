@@ -43,17 +43,19 @@ class AttendanceRecord(db.Model):
 # Utilitaire : extraire un embedding facial via DeepFace
 # ----------------------------------------------------
 def get_face_embedding(image_path):
-    """
-    Utilise DeepFace avec le modèle FaceNet pour obtenir un embedding (vecteur numérique).
-    Retourne une liste Python (par ex. 128 valeurs).
-    """
-    # DeepFace.represent -> renvoie une liste de floats représentant le visage
-    embedding_vector = DeepFace.represent(
+    result = DeepFace.represent(
         img_path=image_path,
         model_name="Facenet",          
-        detector_backend="mtcnn"        # pour détection du visage (ou 'opencv', 'retinaface', etc.)
+        detector_backend="mtcnn"
     )
-    return embedding_vector
+    # Si result est une liste avec un seul dict
+    if isinstance(result, list) and len(result) > 0 and "embedding" in result[0]:
+        embedding_vec = result[0]["embedding"]
+        # Convertir les valeurs en types de données Python natifs
+        embedding_vec = [float(val) for val in embedding_vec]
+        return embedding_vec
+    else:
+        raise ValueError("Embedding not found")
 
 # ----------------------------------------------------
 # Page d'accueil avec deux formulaires :
@@ -70,47 +72,26 @@ def home():
 # ----------------------------------------------------
 @app.route('/register', methods=['POST'])
 def register_employee():
-    """
-    Attend un formulaire contenant 'name' et 'image' :
-      - name : nom de la personne
-      - image : fichier image (jpg, png...)
-    On calcule son embedding, puis on l'ajoute à la base.
-    """
     name = request.form.get("name")
     if "image" not in request.files or not name:
         return jsonify({"error": "Missing 'name' or 'image' in the form-data."}), 400
 
     image_file = request.files["image"]
-
-    # On sauvegarde temporairement l'image
     temp_path = f"temp_{uuid.uuid4()}.jpg"
     image_file.save(temp_path)
 
     try:
-        # Obtenir l'embedding
-        embedding = get_face_embedding(temp_path)  # liste de floats
+        embedding = get_face_embedding(temp_path)
+        embedding_json = json.dumps(embedding)
+        new_employee = Employee(name=name, embedding=embedding_json)
+        db.session.add(new_employee)
+        db.session.commit()
+        return jsonify({"message": "Employee registered successfully."}), 201
     except Exception as e:
-        os.remove(temp_path)
         return jsonify({"error": str(e)}), 500
     finally:
-        # On supprime l'image brute (pas de stockage long terme)
         if os.path.exists(temp_path):
             os.remove(temp_path)
-
-    # Convertir l'embedding en JSON pour stocker en BDD
-    embedding_json = json.dumps(embedding)
-
-    # Créer un nouvel employé
-    new_emp = Employee(name=name, embedding=embedding_json)
-    db.session.add(new_emp)
-    try:
-        db.session.commit()
-    except Exception as e:
-        
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
-    return jsonify({"message": f"Employee '{name}' registered successfully."})
 
 
 # ----------------------------------------------------
