@@ -69,17 +69,23 @@ class AttendanceRecord(db.Model):
 # Utilitaire : extraire un embedding facial via DeepFace
 # ----------------------------------------------------
 def get_face_embedding(image_path):
-    """
-    Utilise DeepFace avec le modèle FaceNet pour obtenir un embedding (vecteur numérique).
-    Retourne une liste Python (par ex. 128 valeurs).
-    """
-    # DeepFace.represent -> renvoie une liste de floats représentant le visage
-    embedding_vector = DeepFace.represent(
+    result = DeepFace.represent(
         img_path=image_path,
-        model_name="Facenet",  # ou "Facenet512"
+        model_name="Facenet",          
         detector_backend="mtcnn"
     )
-    return embedding_vector
+    # Si result est une liste avec un seul dict
+    if isinstance(result, list) and len(result) > 0 and "embedding" in result[0]:
+        embedding_vec = result[0]["embedding"]
+    elif isinstance(result, dict) and "embedding" in result:
+        embedding_vec = result["embedding"]
+    else:
+        raise ValueError("Impossible de trouver le champ 'embedding' dans le résultat DeepFace.")
+    
+    # Convertir tout en float Python standard
+    embedding_vec = [float(x) for x in embedding_vec]
+    return embedding_vec
+
 
 # ----------------------------------------------------
 # Page d'accueil avec deux formulaires
@@ -133,12 +139,6 @@ def register_employee():
 # ----------------------------------------------------
 @app.route('/clock_in', methods=['POST'])
 def clock_in():
-    """
-    Attend un fichier 'image':
-      - On calcule l'embedding
-      - On compare avec tous ceux en base
-      - On trouve le plus proche. Si distance < threshold => pointage validé
-    """
     if "image" not in request.files:
         return jsonify({"error": "No image provided."}), 400
 
@@ -147,7 +147,7 @@ def clock_in():
     image_file.save(temp_path)
 
     try:
-        unknown_emb = get_face_embedding(temp_path)
+        unknown_emb = get_face_embedding(temp_path)  # => liste de floats Python
     except Exception as e:
         os.remove(temp_path)
         return jsonify({"error": str(e)}), 500
@@ -155,29 +155,26 @@ def clock_in():
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-    # Charger tous les employés
     employees = Employee.query.all()
-    unknown_emb_array = np.array(unknown_emb)
 
+    # On initialise best_distance, best_match
+    best_distance = float("inf")  # On part d’un float Python
     best_match = None
-    best_distance = float(best_distance)
 
-
-    # Seuil empirique
     threshold = 10.0
 
     for emp in employees:
-        emp_emb_array = np.array(json.loads(emp.embedding))
-        dist = np.linalg.norm(unknown_emb_array - emp_emb_array)
+        emp_emb_array = np.array(json.loads(emp.embedding), dtype=float)  # Converti en float
+        dist = np.linalg.norm(np.array(unknown_emb) - emp_emb_array)
+
         if dist < best_distance:
             best_distance = dist
             best_match = emp
 
-    # Convertir best_distance en float Python standard pour la sérialisation JSON
+    # Convertir en float Python au cas où best_distance soit un np.float64
     best_distance = float(best_distance)
 
     if best_match and best_distance < threshold:
-        # On enregistre le pointage
         record = AttendanceRecord(employee_id=best_match.id)
         db.session.add(record)
         db.session.commit()
