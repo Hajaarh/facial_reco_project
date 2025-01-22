@@ -1,4 +1,4 @@
-# README - Reconnaissance Faciale : Approche Docker
+# Reconnaissance Faciale : Approche Docker
 
 ## 1. Contexte et Objectif
 
