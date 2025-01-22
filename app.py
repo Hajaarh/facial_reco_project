@@ -93,37 +93,31 @@ def home():
 # ----------------------------------------------------
 @app.route('/register', methods=['POST'])
 def register_employee():
-    """
-    Attend un formulaire contenant 'name' et 'image':
-      - name : nom de la personne
-      - image : fichier image (jpg, png...)
-    On calcule son embedding, puis on l'ajoute à la base.
-    """
     name = request.form.get("name")
     if "image" not in request.files or not name:
         return jsonify({"error": "Missing 'name' or 'image' in the form-data."}), 400
 
     image_file = request.files["image"]
-
-    # Sauvegarde temporaire
     temp_path = f"temp_{uuid.uuid4()}.jpg"
     image_file.save(temp_path)
 
     try:
-        # Obtenir l'embedding
-        embedding = get_face_embedding(temp_path)  # liste de floats
+        # Obtenir l'embedding depuis DeepFace
+        raw_embedding = get_face_embedding(temp_path)
+        
+        # Forcer la conversion au type float Python
+        embedding = [float(x) for x in raw_embedding]
+
     except Exception as e:
         os.remove(temp_path)
         return jsonify({"error": str(e)}), 500
     finally:
-        # On supprime l'image brute (pas de stockage long terme)
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-    # Convertir l'embedding en JSON pour stocker en BDD
+    # Sérialiser en JSON sans erreur
     embedding_json = json.dumps(embedding)
 
-    # Créer un nouvel employé
     new_emp = Employee(name=name, embedding=embedding_json)
     db.session.add(new_emp)
     try:
