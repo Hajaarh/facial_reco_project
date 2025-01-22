@@ -160,7 +160,8 @@ def clock_in():
     unknown_emb_array = np.array(unknown_emb)
 
     best_match = None
-    best_distance = float("inf")  # Python float
+    best_distance = float(best_distance)
+
 
     # Seuil empirique
     threshold = 10.0
