@@ -189,6 +189,8 @@
     e.preventDefault(); // Empêche le rechargement de page
 
     registerFeedback.textContent = "Envoi en cours...";
+    registerFeedback.style.color = "#fff";
+
     const formData = new FormData(registerForm);
 
     try {
@@ -196,7 +198,18 @@
         method: 'POST',
         body: formData
       });
-      const data = await response.json();
+
+      // On tente de parser la réponse en JSON
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        // Si on n'arrive pas à parser en JSON (ex: HTML d'erreur 500)
+        const text = await response.text();
+        registerFeedback.style.color = "red";
+        registerFeedback.textContent = `Erreur (réponse non-JSON) : ${text}`;
+        return;
+      }
 
       if (response.ok) {
         registerFeedback.style.color = "lightgreen";
@@ -219,6 +232,8 @@
     e.preventDefault();
 
     clockInFeedback.textContent = "Envoi en cours...";
+    clockInFeedback.style.color = "#fff";
+
     const formData = new FormData(clockInForm);
 
     try {
@@ -226,14 +241,25 @@
         method: 'POST',
         body: formData
       });
-      const data = await response.json();
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        const text = await response.text();
+        clockInFeedback.style.color = "red";
+        clockInFeedback.textContent = `Erreur (réponse non-JSON) : ${text}`;
+        return;
+      }
 
       if (response.ok) {
         // On peut afficher le nom de l'employé + distance
         clockInFeedback.style.color = "lightgreen";
-        clockInFeedback.textContent = data.message 
-          ? `${data.message} (distance: ${data.distance.toFixed(2)})` 
-          : "Pointage réussi !";
+        if (data.message) {
+          clockInFeedback.textContent = `${data.message} (distance: ${data.distance?.toFixed?.(2) ?? data.distance})`;
+        } else {
+          clockInFeedback.textContent = "Pointage réussi !";
+        }
       } else {
         clockInFeedback.style.color = "yellow";
         clockInFeedback.textContent = data.error 
