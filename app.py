@@ -42,7 +42,7 @@ def protected():
 # Configuration MySQL (adaptée à Docker Compose)
 # ----------------------------------------------------
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:password@localhost:3307/facial_recognition"
+app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:password@localhost:3306/facial_recognition"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
