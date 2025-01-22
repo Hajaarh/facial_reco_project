@@ -10,7 +10,6 @@ from deepface import DeepFace
 
 
 app = Flask(__name__)
-
 # ----------------------------------------------------
 # Configuration MySQL (adaptée à Docker Compose)
 # ----------------------------------------------------
