@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 import os
 import uuid
 import json
@@ -15,6 +14,28 @@ app = Flask(__name__)
 # ---------- Clé secrète pour JWT ----------
 app.config['JWT_SECRET_KEY'] = 'supersecret'
 jwt = JWTManager(app)
+
+# Route pour générer un token JWT
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.json.get('username', None)
+    password = request.json.get('password', None)
+    
+    # Vérifiez les infos d'identification
+    if username != 'test' or password != 'test':
+        return jsonify({"msg": "Bad username or password"}), 401
+
+    # Créez un nouveau token d'accès
+    access_token = create_access_token(identity=username)
+    return jsonify(access_token=access_token)
+
+# Exemple de route protégée
+@app.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    # Cette fonction current_user n'est pas définie dans ton code,
+    # donc on la commente ou on la remplace par un message générique
+    return jsonify(logged_in_as="some_user"), 200
 
 # ---------------------------------------------------------------------
 # Configuration MySQL (adaptée à Docker Compose)
@@ -32,36 +53,6 @@ class Employee(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False, unique=True)
     embedding = db.Column(db.Text, nullable=False)  # Stocke l'embedding en JSON
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)
-    
-# Créer les tables au démarrage
-    with app.app_context():
-        db.create_all()
-
-
-# Route pour générer un token JWT
-@app.route('/login', methods=['POST'])
-def login():
-    email = request.json.get('email', None)
-    password = request.json.get('password', None)
-    
-    # Vérifiez les infos d'identification
-    employee = Employee.query.filter_by(email=email).first()
-    if employee is None or not check_password_hash(employee.password, password):
-        return jsonify({"msg": "Bad email or password"}), 401
-
-    # Créez un nouveau token d'accès
-    access_token = create_access_token(identity=email)
-    return jsonify(access_token=access_token)
-
-# Exemple de route protégée
-@app.route('/protected', methods=['GET'])
-@jwt_required()
-def protected():
-    current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user), 200
-
 
 # ----------------------------------------------------
 # Modèle AttendanceRecord : on stocke l'heure de pointage
@@ -148,6 +139,12 @@ def register_employee():
 # ----------------------------------------------------
 @app.route('/clock_in', methods=['POST'])
 def clock_in():
+    """
+    Attend un fichier 'image':
+      - On calcule l'embedding
+      - On compare avec tous ceux en base
+      - On trouve le plus proche. Si distance < threshold => pointage validé
+    """
     if "image" not in request.files:
         return jsonify({"error": "No image provided."}), 400
 
@@ -156,7 +153,7 @@ def clock_in():
     image_file.save(temp_path)
 
     try:
-        unknown_emb = get_face_embedding(temp_path)  # => liste de floats Python
+        unknown_emb = get_face_embedding(temp_path)
     except Exception as e:
         os.remove(temp_path)
         return jsonify({"error": str(e)}), 500
@@ -164,26 +161,31 @@ def clock_in():
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
+    # Charger tous les employés
     employees = Employee.query.all()
+    unknown_emb_array = np.array(unknown_emb)
 
-    # On initialise best_distance, best_match
-    best_distance = float("inf")  # On part d’un float Python
     best_match = None
+    best_distance = float(best_distance)
 
+
+    # Seuil empirique
     threshold = 10.0
 
+    best_distance = float("inf")
+    best_match = None
+    
     for emp in employees:
-        emp_emb_array = np.array(json.loads(emp.embedding), dtype=float)  # Converti en float
-        dist = np.linalg.norm(np.array(unknown_emb) - emp_emb_array)
-
+        emp_emb_array = np.array(json.loads(emp.embedding))
+        dist = np.linalg.norm(unknown_emb_array - emp_emb_array)
         if dist < best_distance:
             best_distance = dist
             best_match = emp
 
-    # Convertir en float Python au cas où best_distance soit un np.float64
-    best_distance = float(best_distance)
+    
 
     if best_match and best_distance < threshold:
+        # On enregistre le pointage
         record = AttendanceRecord(employee_id=best_match.id)
         db.session.add(record)
         db.session.commit()
@@ -198,4 +200,7 @@ def clock_in():
 # Main
 # ----------------------------------------------------
 if __name__ == '__main__':
+    # Créer les tables au démarrage
+    with app.app_context():
+        db.create_all()
     app.run(host='0.0.0.0', port=5000)
